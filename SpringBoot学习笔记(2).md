@@ -87,3 +87,202 @@
 </dependency>
 ```
 
+
+
+## 二.重要注解
+
+- ### @ConfigurationProperties 和 @Value比较
+
+![1585746608931](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\1585746608931.png)
+
+注：
+
+1. 松散语法：
+
+   ```
+   - person.firstName:使用标准方式
+   - person.first-name:大写用-         
+   - person.first_name:大写用_
+   - PERSON_FIRST_NAME: 系统属性推荐使用这种写法
+   ```
+
+2. Spel：即指EL表达式
+
+   举例：
+
+   ```
+   userAge = 12   //可以
+   userAge = #{2*6}  //EL表达式不支持
+   ```
+
+3. 数据校验：
+
+    @ConfigurationProperties＋ @Validated 支持 
+
+   举例：
+
+   ```java
+   import javax.validation.constraints.NotNull;
+   
+   import org.hibernate.validator.constraints.Email;
+   import org.springframework.boot.context.properties.ConfigurationProperties;
+   import org.springframework.validation.annotation.Validated;
+   
+   @ConfigurationProperties
+   @Validated
+   public class Properties {
+   
+       @NotNull
+       private String userName;
+       
+       @Email
+       private String email;
+       
+   }
+   ```
+
+   
+
+- ### @PropertySource&@ImportResource
+
+  **@PropertySource：**加载指定的配置文件
+
+```java
+@Component
+@ConfigurationProperties(prefix = "person") //该注解定位的配置文件为全局配置文件
+//@Validated
+@PropertySource(value = {"classpath:person.properties"})
+public class Person {
+    private Integer id;
+    //@Email 这个注解的意思是name的格式必须是邮箱的格式
+    private String name;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "Person{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
+    }
+}
+
+```
+
+
+
+**@ImportResource**
+
+导入spring的配置，比如bean.xml文件，让配置文件里面的内容生效；
+
+SpringBoot中没有spring的配置文件，我们自己编写的配置文件也不能自动识别。
+
+想让生效，需要加这个注解。
+
+但是，这并不是SpringBoot推荐的注解方式，比较麻烦。
+
+
+
+> SpringBoot推荐的注解方式：
+
+1.不去编写Spring配置文件。
+
+2.编写一个配置类====代Spring配置文件
+
+3.使用@Bean给容器中添加组件
+
+```java
+@Configuration
+public class MyAppConfig {
+    //将方法的返回值添加到容器中;容器中这个组件默认id就是方法名
+    @Bean
+    public HelloService helloService(){
+        System.out.println("配置类@Bean给容器中添加组件了...");
+        return new HelloService();
+    }
+
+}
+```
+
+
+
+## 三.配置文件占位符
+
+### 1.随机数
+
+```java
+${random.value}、${random.int}、${random.long}
+${random.int(10)}、${random.int[1024,65536]}
+```
+
+### 2.占位符获取之前的值，如果之前没有可以用冒号来指定值。
+
+还可以使用我们这个配置文件中自己在前面定义的值，例如：
+
+```
+person.last-name=张三
+person.dog.name=${person.last-name}小狗
+```
+
+还有，我们如果前面没有这个值呢？
+
+我们可以使用${app.name:金毛}来指定找不到属性时的默认值。
+
+
+
+## 四.Profile文件的编写
+
+- ### 多profile文件
+
+  可以编写多个profile文件，然后动态切换，如动态切换端口的设置。
+
+- ### yml文件支持多文档快方式
+
+   “---”为分隔符，将配置文件分成不同的几个文档
+
+- ### 激活profile
+
+​       1.在(主)配置文件中指定 spring.profiles.active=XX
+
+​       2.命令行:
+
+​          (cmd命令窗口) java -jar XX(文件名) --spring.profiles.active=XX
+
+​          可以直接在测试的时候，配置传入命令行参数。
+
+​       3.虚拟机参数：
+
+​          -Dspring.profiles.active=dev
+
+
+
+## 五.配置文件加载位置
+
+- springboot 启动会扫描一下位置的application.properties或者application.yml文件作为Springboot的默认配置文件。
+
+  -- file../config/  (项目根路径下的config文件夹下的配置文件)
+
+  -- file../      (项目根路径下的配置文件)
+
+  -- classpath:/config/  (resources文件夹下的config文件夹下的配置文件)
+
+  -- classpath:/   （resources文件夹下的配置文件）
+
+​       (注意:**以上四个文件路径的优先级从高到低依次减小**，所有位置的文件都会被加载，高优先级配置内容会覆盖低优先级配置内容)
+
+​        --也可以通过配置spring.config.location来改变默认配置
