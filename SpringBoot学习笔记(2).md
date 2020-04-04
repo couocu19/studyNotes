@@ -286,3 +286,35 @@ person.dog.name=${person.last-name}小狗
 ​       (注意:**以上四个文件路径的优先级从高到低依次减小**，所有位置的文件都会被加载，高优先级配置内容会覆盖低优先级配置内容)
 
 ​        --也可以通过配置spring.config.location来改变默认配置
+
+
+
+## 六.springboot日志框架
+
+springboot默认已经为我们配置好了日志，怎样使用？
+
+下面是测试代码
+
+```java
+@SpringBootTest
+class Day02ConfigApplicationTests {
+
+    //记录器
+    Logger logger  = LoggerFactory.getLogger(getClass());
+    @Test
+    void contextLoads() {
+        //日志的级别
+        //级别由低到高 trace<debug<info<warn<error
+        //可以调整输出的日志级别，可以在配置文件中调整
+        logger.trace("trace");
+        logger.debug("debug");
+
+        //springboot默认输出日志级别,没有调整就使用默认级别
+        logger.info("info");
+        logger.warn("warn");
+        logger.error("error");
+    }
+
+}
+```
+
