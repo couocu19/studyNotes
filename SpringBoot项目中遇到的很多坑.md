@@ -81,6 +81,32 @@
   
   
   
+  ## 4.26更新
+  
+  ### 关于 mybatis-generator生成器
+  
+  刚才在写注册接口的时候，我本来是直接粘贴了上一个项目中的注册接口，然后发现插入数据失败啦。一看是dao层出了问题，我看着调用的方法时生成器写好的方法咋会失败……
+  
+  结果是这个生成器生成的pojo层的实体类是上一个数据库中同名的实体类。。。。迷惑
+  
+  然后百度解决啦！需要在生成器的配置文件中加一句配置
+  
+  **[generatorConfig.xml]**
+  
+  ```xml
+    <!--jdbc的数据库连接 -->
+          <jdbcConnection
+                  driverClass="${db.driverClassName}"
+                  connectionURL="${db.url}"
+                  userId="${db.username}"
+                  password="${db.password}">
+               (ps:下面这一句是重点)
+              <property name="nullCatalogMeansCurrent" value="true"/>
+          </jdbcConnection>
+  ```
+  
+  
+  
   
 
 
