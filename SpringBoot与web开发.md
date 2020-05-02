@@ -73,4 +73,20 @@ public class UserController {
         users.remove(id);
         return "success";
     }
-    
+
+
+
+## 5.2更新
+
+- ### mybatis实现当插入数据之后返回刚刚插入的id
+
+  实现方法：在sql语句的属性中加入<keyProperty="id" useGeneratedKeys="true">这两个属性
+
+  ```xml
+    <!-- MySQL中获取主键并插入1 -->
+      <insert id="insertUser" parameterType="user" keyProperty="userId" useGeneratedKeys="true">
+          insert into USER(u_id, u_name, u_pwd) values(#{userId}, #{userName}, #{userPassword})
+      </insert>
+  ```
+
+  
