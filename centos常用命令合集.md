@@ -122,3 +122,22 @@ Linux centos关机命令：
 - 　　3、shutdown -h now 立刻关机(root用户使用)
 - 　　4、shutdown -h 10 10分钟后自动关机
 
+## **在 netstat 输出中显示 PID 和进程名称 netstat -p**
+
+netstat -p 可以与其它开关一起使用，就可以添加 “PID/进程名称” 到 netstat 输出中，这样 debugging 的时候可以很方便的发现特定端口运行的程序。
+
+[![复制代码](https://common.cnblogs.com/images/copycode.gif)](javascript:void(0);)
+
+```
+# netstat -pt Active Internet connections (w/o servers) Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name tcp        1      0 ramesh-laptop.loc:47212 192.168.185.75:www        CLOSE_WAIT  2109/firefox tcp        0      0 ramesh-laptop.loc:52750 lax:www ESTABLISHED 2109/firefox
+```
+
+**补充：**
+
+netstat –lnp 查看监听端口(查看网络连接状况)
+
+netstat –an  查看所有的链接
+
+netstat –an |grep IP+端口 |grep –ic estab 查看某个端口的并发数 
+
+yum -y install net-tools
