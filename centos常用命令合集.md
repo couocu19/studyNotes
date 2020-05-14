@@ -58,11 +58,9 @@ man firewall-cmd                              ##查看帮助
 
 重启命令:
 
-sudo ../../sbin/nginx/ -s reload
+注意：首先你要进入nginx文件夹下的sbin目录中，然后执行命令：
 
-sudo ../../sbin/nginx/ -r reload
-
-sudo ../../sbin/nginx/ -e reload
+./nginx -s reload
 
 #### tomcat相关
 
