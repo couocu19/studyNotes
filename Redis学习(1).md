@@ -1,5 +1,7 @@
 # Redis学习(1)
 
+  安装路径： /home/redis-5.0.8
+
 - ## 为什么要用redis？它解决了什么问题？
 
   > 是一个高性能的ky-value内存数据库，他支持常用的5种数据结构：String，Hash哈希表，List列表，Set集合，Zset有序集合等数据类型。
@@ -83,5 +85,28 @@
   将daemonize no 修改为 daemonize yes
   ```
 
-  
+
+
+
+# 7.16更新
+
+## 问题：强制把redis快照关闭了导致不能持久化的问题
+
+### 所报异常：
+
+```
+MISCONF Redis is configured to save RDB snapshots, but it is currently not able to persist on disk. Commands that may modify the data set are disabled, because this instance is configured to report errors during writes if RDB snapshotting fails (stop-writes-on-bgsave-error option). Please check
+```
+
+解决方案
+
+```
+首先进入redis
+然后修改redis.conf中的配置
+有两种修改方法，一种是通过redis命令行修改，另一种是直接修改redis.conf配置文件
+命令行修改方式示例：
+127.0.0.1:6379> config set stop-writes-on-bgsave-error no
+修改redis.conf文件：vi打开redis-server配置的redis.conf文件，然后使用快捷匹配模式：/stop-writes-on-bgsave-error定位到stop-writes-on-bgsave-error字符串所在位置，接着把后面的yes设置为no即可。
+
+```
 
