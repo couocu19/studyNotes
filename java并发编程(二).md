@@ -62,6 +62,12 @@
 
   ​     在大多数情况下，我们写并发的代码使用synchronized就足够了，而且使用synchronized是首选，不过如果我们希望更加灵活地使用锁来开发，java还提供了一个接口Lock。
 
+####     什么叫可重入锁？
+
+​          可重入锁，也叫作递归锁，指的是同一个线程的外层函数获得锁孩子后，其内层递归函数仍然可以获得该锁而不受到影响。
+
+​          在java环境下ReentrantLock和Synchronized都是可重入锁。
+
 
 
 - ### AQS（AbstractQueuedSynchronizer概述)
