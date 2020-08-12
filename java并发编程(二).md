@@ -145,8 +145,25 @@
 
   - #### AQS类提供的一些方法：
 
-    ConditionObject类下提供的方法：
+    **ConditionObject类下提供的方法：**
 
+     ConditionObject类的作用：
+    
+    ​    与ReentrantLock一起使用，是AQS中的一个内部类，为了支持条件队列的锁更加方便。
+    
+     **ConditionObject类中的条件队列和CLH队列之间的“配合”：**
+    
+    ```
+    具体过程：
+    step1:将该线程封装成node，新节点的状态为CONDITION，添加到队列尾部
+    step2:尝试释放当前线程占有的锁，释放成功，则调用unparkSuccessor方法唤醒该节点在CLH队列中的后继节点。
+    step3:在while循环中调用isOnSyncQueue方法检测node是否再次transfer到CLH队列中（其他线程调用signal或signalAll时，该线程可能从CONDITION队列中transfer到CLH队列中），如果没有，则park当前线程，等待唤醒，同时调用checkInterruptWhileWaiting检测当前线程在等待过程中是否发生中断，设置interruptMode的值来标志中断状态。如果检测到当前线程已经处于CLH队列中了，则跳出while循环。
+    step4:调用acquireQueued阻塞方法来在CLH队列中获取锁。
+    step5:检查interruptMode的状态，在最后调用reportInterruptAfterWait统一抛出异常或发生中断。
+    
+    基本流程：首先将node加入condition队列，然后释放锁，挂起当前线程等待唤醒，唤醒后重新在CLH队列中调用acquireQueued获取锁。（实现Object.wait方法的功能）
+    ```
+    
     - ConditionObject()
     
     - await()：void
@@ -371,12 +388,12 @@
     //只有成功添加后，当前线程才会从该方法返回，否则会一直执行下去。
         
     ```
-      
+    
         #### 注意：
-      
+          
             1. addWaiter返回的是当前加入的尾结点；enq返回的是当前尾结点的前驱结点。
                2. 在网上查到的源码中，enq比addWaiter方法多了一个初始化头结点，并使尾结点指向头结点的过程，但是在我看到的源码中，两个方法均有这个过程，不同点就是返回的值不同，一个返回前驱结点一个返回当前尾结点，还有一个区别就是addWaiter方法会对传入方法的mode进行一个包装，包装为node之后才进行循环。
-      
+    
       ```java
       
        /**
@@ -388,9 +405,9 @@
                   tail = h;
           }
       ```
+    
       
-      
-      
+    
       - boolean acquireQueued(final Node node, int arg) 
 
   ```java
