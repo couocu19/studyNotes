@@ -347,4 +347,106 @@ public class WebSocketServer {
   如果写ApplicationEvent参数,就是代表所有的只要继承spring事件ApplicationEvent的都监听.
 
   从事件里一定是可以拿到事件源的
-  
+
+
+
+## 8.13学习更新
+
+### SpringBoot中随机数的设置方法
+
+可以在下一个项目中使用到:
+
+**1.添加config/random.properties文件，添加以下内容：**
+
+```java
+#随机32位MD5字符串
+user.random.secret=${random.value}
+
+#随机int数字
+user.random.intNumber=${random.int}
+
+#随机long数字
+user.random.longNumber=${random.long}
+
+#随便uuid
+user.random.uuid=${random.uuid}
+
+#随机10以内的数字
+user.random.lessTen=${random.int(10)}
+
+#随机1024~65536之内的数字
+user.random.range=${random.int[1024,65536]}
+
+```
+
+
+
+**2.添加一个配置文件的绑定类**
+
+```java
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.stereotype.Component;
+@Component
+@ConfigurationProperties(prefix = "user.random")
+@PropertySource(value = { "config/random.properties" })
+public class RandomConfig {
+
+    private String secret;
+    private int intNumber;
+    private int lessTen;
+    private int range;
+    private long longNumber;
+    private String uuid;
+
+    public String getSecret() {
+        return secret;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
+    }
+
+    public int getIntNumber() {
+        return intNumber;
+    }
+
+    public void setIntNumber(int intNumber) {
+        this.intNumber = intNumber;
+    }
+
+    public int getLessTen() {
+        return lessTen;
+    }
+
+    public void setLessTen(int lessTen) {
+        this.lessTen = lessTen;
+    }
+
+    public int getRange() {
+        return range;
+    }
+
+    public void setRange(int range) {
+        this.range = range;
+    }
+
+    public long getLongNumber() {
+        return longNumber;
+    }
+
+    public void setLongNumber(long longNumber) {
+        this.longNumber = longNumber;
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+    
+}
+```
+

@@ -97,5 +97,16 @@
   [root@izbp15p4bkvr39g2jyaa9qz webapps]# nohup: ignoring input and appending          output to ‘nohup.out’
   ```
 
+  ## 8.13更新
+
+  ### 怎样在centos下查看tomact日志？
+
+  ```
+  1、先切换到：cd /usr/local/tomcat/logs
+  2、tail -f catalina.out
+  3、这样运行时就可以实时查看运行日志了
+   Ctrl+c 是退出tail命令。
+  ```
+
   
 

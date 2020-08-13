@@ -56,6 +56,8 @@ OK
 
 作用：先查出key value的值，然后再修改新的值
 
+返回值：
+
 语法：GETSET key value
 
 所有参数为必选参数，获取指定key的value，并设置key的值为value
