@@ -139,3 +139,29 @@ netstat –an  查看所有的链接
 netstat –an |grep IP+端口 |grep –ic estab 查看某个端口的并发数 
 
 yum -y install net-tools
+
+
+
+## 解压文件的命令
+
+```
+1.进入文件所在文件夹
+2.执行命令：
+   tar -zxvf 文件名
+```
+
+## 输出当前进入到的文件夹的路径
+
+```
+pwd
+```
+
+## 删除指定后缀的文件
+
+```
+例如：
+rm *.cmd
+```
+
+
+

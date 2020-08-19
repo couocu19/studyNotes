@@ -110,13 +110,90 @@
 
 ​    分布式追踪系统：sleuth+zipkin
 
+## CAP定理
 
+指的是在一个分布式系统中，Consistency（一致性），Availability（可用性），Partition tolerance（分区容错性），**三者不可同时获得。**
 
-  
+### 一致性（C）：
+
+​      在分布式系统中的所有数据备份，在同一时刻是否同样的值。（所有节点在同一时间的数据完全一致，越多节点，数据同步越耗时）
+
+####       强一致性
+
+####       单调一致性
+
+####       会话一致性
+
+####       最终一致性
+
+####       弱一致性
+
+### 可用性（A）：
+
+​     负载过大后，集群整体是否还能响应客户端的读写请求。（服务一直可用，而且是正常响应时间）
+
+### 分区容错性（P）：
+
+​    分区容忍性，就是高可用行，一个结点崩了，并不影响其他的结点（100个结点，挂了几个，不影响服务，机器越多越好）
+
+（一个分布式系统必须能够保证分区容错性）
+
+**CAP理论就是说在分布式的存储系统中，最多只能实现上面的两点。而由于当前的网络硬件肯定会出现延迟丢包等问题，分区容忍性使我们必须要实现的。所以我们之只能在一致性和可用性之间进行权衡。**         
+
+![image-20200819173653872](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200819173653872.png)
 
    
 
 
+
+## zookeeper在win,linux下的安装
+
+- ### linux下的安装路径：
+
+     /usr/local
+
+- ### 查看zookeeper的运行状态
+
+  ```
+   在准备好相应的配置之后，可以直接通过zkServer.sh 这个脚本进行服务的相关操作
+  1. 启动ZK服务:       sh bin/zkServer.sh start
+  2. 查看ZK服务状态: sh bin/zkServer.sh status
+  3. 停止ZK服务:       sh bin/zkServer.sh stop
+  4. 重启ZK服务:       sh bin/zkServer.sh restart
+  ```
+
+  ![image-20200819211957520](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200819211957520.png)
+
+  
+
+```
+tickTime=2000  #心跳时间,zookeeper中最基本的时间单位，毫秒级别，2000毫秒=2秒
+initLimit=10  #两个服务器之间连接能容忍的最多的心跳数 #结合tickTime，最多容忍的时间为tickTime*initLimit=20秒左右
+syncLimit=5  #两个服务器能容忍的连接时的最大失败数
+dataDir=/tmp/zookeeper  #这个路径要修改成自己创建的data文件夹的目录的路径
+clientPort=2181
+
+```
+
+
+
+## zookeeper在windows端和linux端的连接
+
+   1.在win和linx端安装好zookeeper
+
+   2.各自修改配置文件
+
+   3.在win端打开windows powershall命令框进入zookeeper的bin目录。
+
+   4.使用命令：
+
+     ```
+ .\zkCli.cmd -timeout 5000 -server 118.31.12.175:2181
+     ```
+
+ps:我在连接的时候一直报错，一直显示无法定位登录配置，无语……
+
+![image-20200819211321521](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200819211321521.png)
 
 
 
