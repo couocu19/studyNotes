@@ -138,7 +138,7 @@
 
 - ### 惰性删除：
 
-     放任键不管，但是每次获取键的时候就会判断当前键是否过期，如果检测到键已经过期，就删除该键。
+  放任键不管，但是每次获取键的时候就会判断当前键是否过期，如果检测到键已经过期，就删除该键。
 
   注意，上述三种处理方式，前两种为主动删除，第三种为被动删除策略。
 
@@ -242,7 +242,380 @@
 
     **为什么要由主服务器来控制过期键的删除？**
 
-      由主服务器同一控制从服务器对过期键的删除，可以保证主从服务器之间数据的一致性。
+      由主服务器同一控制从服务器对过期键的删除，可以保证主从服务器之间数据的一致
+
+    
+
+    ## 如何保证redis的高并发和高可用
+
+    ### redis主从架构
+
+    ​    单机的redis，能够承载的QPS大概在上万到几万不等。
+
+    ​    对于缓存来说，一般都是支持读高并发的。因此架构做成主从架构(master-slave),一主多从，主负责写，并且将数据复制到其他的slave结点，从节点负责读。所有的读请求全部走从节点。这样就实现了水平扩容，支撑读高并发。
+
+      ![image-20200820105517568](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200820105517568.png)
+
+    ### redis replication的核心机制
+
+    > [^ps：replication：复制]: 
+    >
+    > redis replication-->主从架构-->读写分离-->水平扩容支撑读高并发
+
+    - redis采用异步方式复制结点，从redis2.8开始，slave node会周期性的确认自己每次复制的数据量。
+
+    - slave node也可以连接其他的slave node；
+
+    - slave node在做复制的时候，不会block master node的正常工作；
+
+    - slave node在做复制的时候，也不会阻塞对自己的查询操作，他会用旧的数据集来提供服务；
+
+      但是复制完成的时候，需要删除旧数据集，加载新数据集，这个时候就会暂停对外服务了。
+
+    - slave node主要用来进行横向扩容，做读写分离。扩容的slave node可以提高读的吞吐量。
+
+    #### 注意：
+
+    ​    如果采用了主从架构，那么就需要开启master node的持久化，并不建议采用slave node作为master node的备份，因为如果发生了宕机，可能会引起数据的丢失，这时slave node复制到的数据也是空的，所以必须开启master node的持久化。
+
+    ​    另外，master的各种备份方案，也是需要做的。万一本地的文件丢失了，从备份中挑选一份rdb去恢复master，这样才能却确保启动的时候是有数据的。即使采用了后续的高可用机制，slave node可以自动接管master node**，但也可能sentinel还没检测到master failure，master node就自动重启了，还是可能导致上面所有的salve node数据被清空。**
+
+    ### 主从复制原理，断点续传，无磁盘化复制，过期key处理
+
+    #### 主从复制原理：
+
+       1.当启动一个slave node的时候，salve node会发送给master node一个psync命令。
+
+       2.如果这时master node是重新连接salve node，那么master node只会将还没有传过去的数据进行复制（即部分缺少的数据）；如果是初次进行连接，那么master node会进行一次全面的复制，即进行full resynchronization过程。
+
+    3. 当master node与slave node 进行初次连接，开始full resynchronization的时候，master node会在后台开启一个线程，生成一个RDB快照文件，并将该文件传给slave node，由slave node将RDB文件持久化到本地磁盘中，再从本地磁盘加载到内存中，同时，master node会缓存客户端传来的写命令到内存中，接着master会将内存中缓存的写命令发送到slave，slave node也会同步这些数据。
+    4. 如果在进行复制的时候master node和slave node断开连接，重新连接之后，master node只会赋值给slave node 部分缺少的数据。master如果发现slave node都来重新连接，仅仅会启动一个rdb save操作，用一份数据服务所有的slave node。
+
+       ![img](http://p1.pstatp.com/large/pgc-image/fce569f83d264f19be938a9dd1347013)
+
+    
+
+    
+
+    ####  断点续传：
+
+    ​    redis从2.8开始就支持断点续传的功能。即如果master node和slave node发生连接中断，重新连接时，slave node并不会让master node重新进行数据的赋值，而是从上次断开连接时复制的数据继续进行复制。
+
+    ​    在master node中维护了一个backlog的变量，同时slave node和master node都会保存一个replica offset和master run id，其中offset就保存在backlog中。当重新连接之后，slave node会从上次连接的offset继续进行复制，如果没有找到对应的offset，那么就会执行一次resynchronization。
+
+    ​    **注意：**
+
+    ​     如果根据host+ip定位master node，是不靠谱的，如果master node重启或者数据发生了变化，那么slave node应该根据不同的run id进行区分。
+
+    
+
+    #### 无磁盘化复制：
+
+      master在内存中直接创建RDB，然后发送给slave，不会在自己本地落地磁盘了。只需要在配置文件中配置：
+
+    ```
+    repli-diskless-sync yes
+    #等待5s在开始复制，因为要等更多的slave重新连接起来
+    repli-diskless-sync-delay 5
+    #ps：diskless：无磁盘化的
+    ```
+
+    
+
+    #### 过期key的处理
+
+    slave不会过期key，只会等待master过期key。
+
+    如果master过期了一个key，或者通过LRU淘汰了一个key，那么会**模拟一条del命令发送给slave。**
+
+    
+
+    #### 完整的复制流程
+
+      1.slave node在启动时，会在本地保存master node的host和ip。在redis.conf中的slaveof中配置有master node的信息。
+
+      2.slave node内部有一个定时，每秒会检查是否有新的master node要连接和复制，如果发现，slave node就和master node进行socket连接。
+
+      3.slave node向master node发送一条ping命令进行连接。
+
+      4.口令认证，如果master node设置了requirepass，slave node需要发送masterauth进行口令认证。
+
+      5.master node将数据全部复制给slave node。
+
+      6.在之后的操作中，master node都会异步的将数据复制给slave node。
+
+    
+
+    #### 数据同步相关的核心机制
+
+      **1.master和slave都会保存一个offset**
+
+    ​      master本身会不不断的增加offset，slave自身也会不断的增加offset。slave每秒会上报自己的offset给master，同时master也会保存每个slave的offset。
+
+    ​     **offset的主要作用？**
+
+    ​      只有master和slave都知道互相的offset，才能知道互相之间数据不一致的情况。
+
+      **2.backlog**
+
+    ​      在master node中有一个backlog，默认是1Mb的大小。
+
+    ​      master node在给slave node做复制的时候，也会将数据在backlog中同步写一份，**backlog主要是用来做全量复制中断后的增量复制的。**
+
+      **3.master run id**
+
+    ​      如果根据host+ip定位master node是不靠谱的，如果master node重启或者数据发生了变化，那么slave node应该根据不同的run id进行区分，如果run id不同就需要做全量赋值。 
+
+    ​      如果需要不更改run id重启redis，可以使用redis-cli debug reload命令。
+
+      **4.psync**
+
+    ​        从节点使用psync从master node进行复制，psync runid offset。master node会根据自身的情况返回响应信息，可能是全量赋值，可能是增量复制（断开连接，重新连接后引发的复制）。
+
+       
+
+    **全量复制**
+
+    - master 执行 bgsave ，在本地生成一份 rdb 快照文件。
+    - master node 将 rdb 快照文件发送给 slave node，如果 rdb 复制时间超过 60秒（repl-timeout），那么 slave node 就会认为复制失败，可以适当调大这个参数(对于千兆网卡的机器，一般每秒传输 100MB，6G 文件，很可能超过 60s)
+    - master node 在生成 rdb 时，会将所有新的写命令缓存在内存中，在 slave node 保存了 rdb 之后，再将新的写命令复制给 slave node。
+    - 如果在复制期间，内存缓冲区持续消耗超过 64MB，或者一次性超过 256MB，那么停止复制，复制失败。
+    - slave node 接收到 rdb 之后，清空自己的旧数据，然后重新加载 rdb 到自己的内存中，同时基于旧的数据版本对外提供服务。
+    - 如果 slave node 开启了 AOF，那么会立即执行 BGREWRITEAOF，重写 AOF。
+      rdb生成、rdb通过网络拷贝、slave旧数据的清理、slave aof rewrite，很耗费时间
+
+      如果复制的数据量在4G~6G之间，那么很可能全量复制时间消耗到1分半到2分钟
+
+    **增量复制**
+
+    - 如果全量复制过程中，master-slave 网络连接断掉，那么 slave 重新连接 master 时，会触发增量复制。
+    - master 直接从自己的 backlog 中获取部分丢失的数据，发送给 slave node，默认 backlog 就是1MB。
+    - msater就是根据 slave 发送的 psync 中的 offset 来从 backlog 中获取数据的。
+
+    
+
+    #### heartbeat
+
+       主从结点互相都会发送heartbeat的信息。
+
+       **master默认每隔10秒发送一次heartbeat，slave node每隔1秒会发送一个heartbeat。**
+
+    #### 异步复制
+
+       master每次接收到写命令之后，先在内部写入数据，然后异步发送给slave node。
+
+    
+
+    ### redis怎样才能做到高可用？
+
+    ​    一个slave挂掉了，是不会影响可用性的，还有其他的slave在提供相同数据下的仙童的对外的查询服务。
+
+    ​    但是，如果master node死掉了呢？
+
+    ​    没法写数据了，写缓存的时候，全部失效了。slave node还有什么用呢？没有master  node给他们复制数据了，系统相当于不可用了。
+
+    ​    redis的高可用架构，叫做failover故障转移，也可以叫做主备切换。
+
+    ​    **master node在故障时，自动监测，并且将某个slave node自动切换为master node的过程叫做主备切换。这个过程，实现了redis的主从架构下的高可用。**
+
+    ****
+
+    
+
+    ### Redis哨兵集群实现高可用
+
+    #### 哨兵的介绍
+
+    ​     sentinel，中文名是哨兵。**哨兵是集群机构中重要的组件**，主要的功能有：
+
+     **1.集群监控**
+
+    ​      监控master  node和slave node是否正常工作。
+
+     **2.消息通知**
+
+    ​     如果某个redis实例出问题了，哨兵负责发送消息作为金宝通知给管理员。
+
+     **3.故障转移**
+
+    ​    如果某一个master node挂掉了，会自动转移到slave node上。
+
+     **4.配置中心**
+
+    ​    如果故障转移发生了，通知client新的master 地址。
+
+    
+
+    **哨兵的核心知识**
+
+    - 哨兵至少需要 3 个实例，来保证自己的健壮性。
+    - 哨兵 + redis 主从的部署架构，是不保证数据零丢失的，只能保证 redis 集群的高可用性。
+    - 对于哨兵 + redis 主从这种复杂的部署架构，尽量在测试环境和生产环境，都进行充足的测试和演练。
+
+    
+
+    ### Redis哨兵主备切换的数据丢失问题与解决方案
+
+    #### 主备切换的过程，可能会导致数据的丢失问题
+
+      **1.异步复制导致数据丢失**
+
+    ​        因为master-->slave的复制都是异步的，所以可能有部分数据还没复制到slave，master就宕机了，这部分数据就丢失了。
+
+      **2.脑裂导致的数据丢失**
+
+    ​       脑裂，也就是说，一个master node脱离了网络，跟其他的slave不能连接，但是实际上，master还运行着，但是这时哨兵可能会认为master宕机了，然后开启了选举机制，将其他的slave切换为master。这时，急群中就会有两个master，也就是所谓的脑裂。
+
+    ​      虽然某个slave切换成了master，但是client可能还没来得及切换到新的master，仍然向master写旧的数据。因此旧master再次恢复的时候，会被作为一个slave挂到新的master上去，自己的数据就会被清空，重新从新的master复制数据。而新的master并没有后来client写入的数据，因此，这部分数据已经丢失了。
+
+      
+
+    #### 数据丢失问题的解决方案
+
+    进行如下配置
+
+    ```
+    min-slaves-to-write 1
+    min-slaves-max-lag 10
+    ```
+
+       上述配置要求至少要有一个slave，数据复制和同步的时间不能超过10秒。如果说一旦所有的slave，数据和同步的延迟都超过了10秒钟，那么这时候master就不会再接收任何的请求了。
+
+       上述两个配置可以减少异步复制和脑裂导致的数据丢失。
+
+    ```
+    1.减少异步复制数据的丢失
+       有了min-----lag这个配置，可以确保一旦slave复制数据和ack延时太长，就认为master宕机后损失的数据太多了，就会拒绝写请求，这样可以把master宕机由于部分数据未同步到slave导致的数据丢失降低到可控范围内。
+    
+    2.减少脑裂的数据丢失
+       如果一个master出现了脑裂，跟其他的slave丢失了连接，那么上述两个配置可以确保说，如果不能继续给指定数量的slave发送数据，而且slave超过10秒没有给自己ack消息，那么就直接拒绝客户端的写请求。
+       这样脑裂后的master就不会接收新的client的新数据，也就避免了数据丢失。上面的配置就确保了。，如果跟任何一个slave丢失了连接，在10秒后发现没有slave给自己ack，那么就拒绝新的请求。因此在脑裂的场景下，最多丢失10秒的数据。
+    ```
+
+    
+
+    #### 怎样保证redis是高并发以及高可用的？
+
+    - **sdown和odown的转换机制**
+
+    - **哨兵集群的自动发现机制**
+
+      ​       哨兵互相之间的发现，是通过 redis 的 pub/sub 系统实现的，每个哨兵都会往**`__sentinel__:hello`这个 channel** 里发送一个消息，这时候所有其他哨兵都可以消费到这个消息，并感知到其他的哨兵的存在。
+
+      ​       每隔两秒钟，每个哨兵都会往自己监控的某个master+slaves对应的_sentinel_:hello channel里发送一个消息，内容是自己的host，ip和runid还有对这个master的监控配置。
+
+      ​      每个哨兵也会监控自己监控的master+slaves对应的...channel，然后去感知到同样在监听这个master+slaves的其他哨兵的存在。
+
+      ​      每个哨兵还会跟其他哨兵交换对这个master的监控配置，互相进行监控配置的同步。
+
+    - **slave配置的自动纠正**
+
+        哨兵会负责自动纠正slave的一些配置：
+
+      ​    1.如果一个slave即将成为master node，哨兵会确保slave复制现有的master数据；
+
+      ​    2.如果slave连接到一个错误的master上，比如故障转移之后 ，那么哨兵会确保他们连接到正确的master上。
+
+    - **slave-->master的选举算法**
+
+      如果一个master被认为odown了，而且majority数量的 哨兵都允许主备切换，那么某一个哨兵就会执行主备切换操作，此时首先要选举出一个slave来，会考虑slave的一些信息：
+
+      ```
+      1.跟master断开连接的时长
+      2.0 slave优先级
+      3.复制的offset
+      4.run id
+      ```
+
+      ​       如果一个 slave 跟 master 断开连接的时间已经超过了**down-after-milliseconds**的 10 倍，外加 master 宕机的时长，那么 slave 就被认为不适合选举为 master。
+
+      ​      接下来会对slave进行排序：
+
+      1.按照slave的优先级排序。slave priority越低，优先级越高。
+
+      2.如果slave priority相同，就看replica offset，哪个slave复制更多的数据，offset越靠后，优先级越高。
+
+      3.如果上面两个条件都相同，那么选择一个较小的run id的slave。
+
+    - **quorum和majority**
+
+      每次一个哨兵要做主备切换，首先需要 quorum 数量的哨兵认为 odown，然后选举出一个哨兵来做切换，这个哨兵还得得到 majority 哨兵的授权，才能正式执行切换。
+        如果 quorum < majority，比如 5 个哨兵，majority 就是 3，quorum 设置为2，那么就 3 个哨兵授权就可以执行切换。
+        但是如果 quorum >= majority，那么必须 quorum 数量的哨兵都授权，比如 5 个哨兵，quorum 是 5，那么必须 5 个哨兵都同意授权，才能执行切换。
+
+      
+
+    - **configuration epoch**
+
+       哨兵会对一套redis master+slaves 进行监控，有相应的监控配置。
+
+       执行切换的那个哨兵，会从要切换到的新master那里得到一个con----epoch，**这就是一个version号，每次切换的version号必须是唯一的**。
+
+       如果第一个选举出的哨兵切换失败了，那么其他哨兵，会等待failover-timeout时间，然后接替继续执行切换，此时会重新获取一个新的configuration epoch，作为新的version号。
+
+    - **configuration传播**
+
+    ​        哨兵完成切换之后，会在自己本地生成最新的master配置，**然后同步给其他的哨兵，**就是之前说的**pub/sub**消息机制。
+
+    ​        这里之前的version号很重要，**因为各种消息都是通过一个channel去发布和监听的，所以一个哨兵完成一次新的切换之后，新的master配置是跟着新的version号的**。
+
+    ​        其他的哨兵是**根据版本号的大小**来更新自己的master配置的。
+
+    
+
+    
+
+    ## 总结
+
+    ​       redis实现高并发主要依靠主从架构，一主多从，一般来说，很对项目就足够了，单主用来写入数据，单机几万QPS，多用来查询数据，多个实例可以提供每秒10W的QPS。
+
+    ​       如果想在实现高并发的同时，容纳大量的数据，就需要redis集群，使用redis集群之后，可以实现每秒几十万的读写并发；
+
+    ​       实现了高并发，怎么样实现高可用呢？
+
+    ​       如果是做主从架构部署，加上哨兵就可以，就可以实现，任何一个实例宕机，可以进行主备切换。
+
+    ​     
+
+    ### 我的理解：
+
+    ​    redis实现高并发和高可用，主要就是两点：
+
+    ​      **主从架构实现读高并发；**
+
+    ​      **哨兵主备切换机制实现集群高可用。**
+
+    
+
+    
+
+    
+
+       
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+      
 
     
 
