@@ -197,7 +197,199 @@ ps:我在连接的时候一直报错，一直显示无法定位登录配置，�
 
 
 
+## 8.29学习更新
 
+### zookeeper在centos下启动时的注意事项
+
+在启动时，首先需要切换一下用户，需要由root用户切换到自定义的用户上。
+
+```
+ chown -R zookeeper:zookeper zookeeper-3.4.14/
+ su zookeeper
+ cd zookeeper-3.4.14/bin
+ ./zkServer.sh start ---->zookeeper启动命令
+```
+
+
+
+- ### zookeeper常用命令值zkCli
+
+  ####   zkCli.sh
+
+     不填后面的参数，默认连接的就是localhost：2181
+
+     **win下面运行的是 .cmd结尾的文件， linux下运行的是.sh结尾的文件。**
+
+  - ####  连接远程服务器
+
+      ```
+    zkCli.sh -timeout 0 -r -server ip:port
+    ```
+
+  - **zkcli.sh h 出现相应的帮助信息**
+
+    ```
+    ZooKeeper -server host:port cmd args
+            stat path [watch]
+            set path data [version]
+            ls path [watch]
+            delquota [-n|-b] path
+            ls2 path [watch]
+            setAcl path acl
+            setquota -n|-b val path
+            history
+            redo cmdno
+            printwatches on|off
+            delete path [version]
+            sync path
+            listquota path
+            rmr path
+            get path [watch]
+            create [-s] [-e] path data acl   //创建节点
+            addauth scheme auth
+            quit
+            getAcl path
+            close
+            connect host:port
+    ```
+
+  - #### zookeeper 节点 
+
+    zookeeper下创建节点:
+
+     **create [-s] [-e] path data acl   //创建节点**
+
+    ​     **-s表示创建顺序节点**
+
+    ​     **-e表示创建临时节点**
+
+    ​     **data表示创建的结点的数据内容**
+
+    ```
+    [zk: localhost:2181(CONNECTED) 0] create -s /couclass cclass
+    Created /couclass0000000000
+    [zk: localhost:2181(CONNECTED) 1] create -s /couclass1 cclass1
+    Created /couclass10000000001
+    ```
+
+    注意：在创建节点时，节点的路径必须是相对于根节点的。即结点的路径前必须加“/”
+
+    
+
+    - **查看**:
+
+       1.获取结点的子节点： 
+
+       ```
+      ls path
+      ```
+
+       2.获取结点的状态:
+
+      ```
+      [zk: localhost:2181(CONNECTED) 1] stat /couclass0000000000
+      cZxid = 0x4  --事务的id
+      ctime = Sat Aug 29 21:03:40 CST 2020  --结点创建的时候的时间
+      mZxid = 0x4  --最后一次更新时事务的id
+      mtime = Sat Aug 29 21:03:40 CST 2020  --最后一次更新的时间
+      pZxid = 0x4   --该节点的子节点列表最后一次被修改的事务id
+      cversion = 0  --子节点列表的版本  
+      dataVersion = 0  --数据内容的版本
+      aclVersion = 0  --acl版本
+      ephemeralOwner = 0x0  --用于临时节点，表示创建该临时结点的事务id，如果当前节点不是一个临时结点，该字段的值就是0
+      dataLength = 6  --数据内容的长度
+      numChildren = 0  --子节点的数量
+      ```
+
+      
+
+       3.查看结点的数据:
+
+      ```
+      [zk: localhost:2181(CONNECTED) 0] get /couclass0000000000
+      cclass
+      cZxid = 0x4
+      ctime = Sat Aug 29 21:03:40 CST 2020
+      mZxid = 0x4
+      mtime = Sat Aug 29 21:03:40 CST 2020
+      pZxid = 0x4
+      cversion = 0
+      dataVersion = 0
+      aclVersion = 0
+      ephemeralOwner = 0x0
+      dataLength = 6
+      numChildren = 0
+      ```
+
+      
+
+       4.获取结点的子节点以及当前结点的状态:
+
+        **(可以先为某一个节点创建一个子节点，然后查看状态)**
+
+      ```
+      [zk: localhost:2181(CONNECTED) 17] ls2 /couclass0000000000
+      [wiggin]
+      cZxid = 0x4
+      ctime = Sat Aug 29 21:03:40 CST 2020
+      mZxid = 0x4
+      mtime = Sat Aug 29 21:03:40 CST 2020
+      pZxid = 0xa
+      cversion = 1
+      dataVersion = 0
+      aclVersion = 0
+      ephemeralOwner = 0x0
+      dataLength = 6
+      numChildren = 1
+      ```
+
+      
+
+      
+
+      # 9.2更新
+  
+      ## zookeeper session机制
+    
+    ​          用于客户端和服务端之间的连接，可设置超时时间，**通过心跳包的机制(客户端向服务端ping包请求)**检查心跳结束，session就过期。
+    
+    ​          session过期的时候，该session创建的所有临时结点都会被抛弃。
+    
+    ##     zookeeper watcher 机制
+    
+     **对节点的watcher操作 get/set stat:**
+    
+    ​      针对每一个节点的操作，都可以有一个监控者，当结点发生变化，会触发watcher事件；
+    
+    ​      但是 get stat set命令只能针对当前的结点，如果当前节点下创建了子节点，是不会触发watcher事件的
+    
+    ​      **zk中watcher是一次性的，触发后立即销毁;**
+    
+    ​      所有有监控者的节点的变更操作都能触发watcher事件。
+    
+     **子节点的watcher操作**
+    
+    （监控父节点，当父节点对应的子节点发生变更的时候，父节点上的watcher事件都会被触发）
+    
+       **ls ls2**---**增删会触发，修改不会，如果子节点再去新增子节点，不会触发**（**也就是说，触发watcher事件也定是直系子节点**）
+    
+    
+    
+    ## zookeeper的acl权限控制
+    
+     （ps: access control lists）
+    
+    ​    ![image-20200902210644695](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200902210644695.png)
+    
+    
+    
+    ## zookeeper中的选举机制
+    
+    ![image-20200902211919922](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200902211919922.png)
+    
+    ​        
+
+​      
 
 
 

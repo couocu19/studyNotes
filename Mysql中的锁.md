@@ -270,7 +270,7 @@ update,insert,delete(排它锁)
 
 #### MVCC的实现原理： 
 
-  MVCC的实现原理主要是依赖记录中的**3个隐式字段，undo日志，Read View**实现的。
+  MVCC的实现原理主要是依赖记录中的**3个隐式字段，undo日志‘，Read View**实现的。
 
 - 隐式字段：
 
