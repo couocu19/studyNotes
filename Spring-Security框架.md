@@ -116,7 +116,74 @@ public class SecurityConfig  extends WebSecurityConfigurerAdapter {
 
 
 
+## 9.8更新
+
+### Spring-Security + Jwt实现登录功能
+
+![image-20200908165338441](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908165338441.png)
+
+![image-20200908170806272](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908170806272.png)
+
+
+
+#### 使用jwt实现登录主要进行的过程：
+
+   1.认证
+
+   2.鉴权
+
+   3.jwt-token的刷新
+
+
+
+### 关于跨域访问问题总结
+
+#### 浏览器同源策略：
+
+  ![image-20200908203528655](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908203528655.png)
 
 
 
 
+
+### spring-security工作原理
+
+![image-20200908210942423](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908210942423.png)
+
+
+
+![image-20200908211318127](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908211318127.png)
+
+
+
+![image-20200908211436405](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908211436405.png)
+
+
+
+
+
+
+
+![image-20200908213348983](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908213348983.png)
+
+
+
+![image-20200908213535183](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908213535183.png)
+
+![image-20200908213607862](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908213607862.png)
+
+![image-20200908213516698](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908213516698.png)
+
+
+
+![image-20200908213644757](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908213644757.png)
+
+
+
+![image-20200908213727541](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908213727541.png)
+
+
+
+
+
+![image-20200908214228266](C:\Users\11310\AppData\Roaming\Typora\typora-user-images\image-20200908214228266.png)
