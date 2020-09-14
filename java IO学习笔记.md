@@ -17,7 +17,7 @@ java IO可以分为以下几类：
 
 ### **引入：**
 
-  **java 中的oio是阻塞的，nio是非阻塞的**
+  **java 中的bio是阻塞的，nio是非阻塞的**
 
    **NodeJS的IO是异步的**
 
@@ -115,6 +115,8 @@ java IO可以分为以下几类：
 ​      此时S端可以自己选择什么时候读取，处理这些io，也就是说S端可以hold多个io
 
    IO的多路复用有 select/poll/epoll这几种方式
+
+  注意：
 
 - #### select方法
 
