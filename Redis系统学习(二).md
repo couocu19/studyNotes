@@ -136,6 +136,8 @@
 
      每隔一段时间，程序就会对数据库进行一次检查，删除里面的过期键。至于要删除多少个键，以及要检查多少个数据库，根据算法而定。
 
+
+
 - ### 惰性删除：
 
   放任键不管，但是每次获取键的时候就会判断当前键是否过期，如果检测到键已经过期，就删除该键。
@@ -179,7 +181,7 @@
 
     ## Redis的过期键处理策略
 
-    redis服务器实际使用的是惰性删除和定期删除两种策略：通过配合使用这两种策略，服务器何以很好的在合理使用cpu和避免浪费内存之间取得一个平衡。
+    redis服务器实际使用的是**惰性删除和定期删除**两种策略：通过配合使用这两种策略，服务器何以很好的在合理使用cpu和避免浪费内存之间取得一个平衡。
 
     ### 1.惰性删除策略的实现
 
@@ -272,13 +274,15 @@
 
       但是复制完成的时候，需要删除旧数据集，加载新数据集，这个时候就会暂停对外服务了。
 
-    - slave node主要用来进行横向扩容，做读写分离。扩容的slave node可以提高读的吞吐量。
+    - slave node主要用来进行**横向扩容，做读写分离**。扩容的slave node可以提高读的吞吐量。
 
     #### 注意：
 
-    ​    如果采用了主从架构，那么就需要开启master node的持久化，并不建议采用slave node作为master node的备份，因为如果发生了宕机，可能会引起数据的丢失，这时slave node复制到的数据也是空的，所以必须开启master node的持久化。
+    ​    如果采用了主从架构，那么就需要开启master node的持久化，**并不建议采用slave node作为master node的备份**，因为如果发生了宕机，可能会引起数据的丢失，这时slave node复制到的数据也是空的，所以必须开启master node的持久化。
 
-    ​    另外，master的各种备份方案，也是需要做的。万一本地的文件丢失了，从备份中挑选一份rdb去恢复master，这样才能却确保启动的时候是有数据的。即使采用了后续的高可用机制，slave node可以自动接管master node**，但也可能sentinel还没检测到master failure，master node就自动重启了，还是可能导致上面所有的salve node数据被清空。**
+    ​    另外，master的各种备份方案，也是需要做的。万一本地的文件丢失了，从备份中挑选一份rdb去恢复master，这样才能却确保启动的时候是有数据的。即使采用了后续的高可用机制，slave node可以自动接管master node**，**
+
+    **但也可能sentinel还没检测到master failure，master node就自动重启了，还是可能导致上面所有的salve node数据被清空。**
 
     ### 主从复制原理，断点续传，无磁盘化复制，过期key处理
 
@@ -286,10 +290,10 @@
 
        1.当启动一个slave node的时候，salve node会发送给master node一个psync命令。
 
-       2.如果这时master node是重新连接salve node，那么master node只会将还没有传过去的数据进行复制（即部分缺少的数据）；如果是初次进行连接，那么master node会进行一次全面的复制，即进行full resynchronization过程。
-
-    3. 当master node与slave node 进行初次连接，开始full resynchronization的时候，master node会在后台开启一个线程，生成一个RDB快照文件，并将该文件传给slave node，由slave node将RDB文件持久化到本地磁盘中，再从本地磁盘加载到内存中，同时，master node会缓存客户端传来的写命令到内存中，接着master会将内存中缓存的写命令发送到slave，slave node也会同步这些数据。
-    4. 如果在进行复制的时候master node和slave node断开连接，重新连接之后，master node只会赋值给slave node 部分缺少的数据。master如果发现slave node都来重新连接，仅仅会启动一个rdb save操作，用一份数据服务所有的slave node。
+       2.如果这时master node是重新连接salve node，那么master node只会将还没有传过去的数据进行复制（即部分缺少的数据）；如果是初次进行连接，那么master node会进行一次全面的复制，即进行**full resynchronization**过程。
+    
+3. 当master node与slave node 进行初次连接，开始full resynchronization的时候，master node会在后台开启一个线程，生成一个RDB快照文件，并将该文件传给slave node，由slave node将RDB文件持久化到本地磁盘中，再从本地磁盘加载到内存中，同时，master node会缓存客户端传来的写命令到内存中，接着master会将内存中缓存的写命令发送到slave，slave node也会同步这些数据。
+    4. 如果在进行复制的时候master node和slave node断开连接，重新连接之后，**master node只会赋值给slave node 部分缺少的数据**。master如果发现slave node都来重新连接，仅仅会启动一个**rdb save**操作，用一份数据服务所有的slave node。
 
        ![img](http://p1.pstatp.com/large/pgc-image/fce569f83d264f19be938a9dd1347013)
 
@@ -299,9 +303,9 @@
 
     ####  断点续传：
 
-    ​    redis从2.8开始就支持断点续传的功能。即如果master node和slave node发生连接中断，重新连接时，slave node并不会让master node重新进行数据的赋值，而是从上次断开连接时复制的数据继续进行复制。
+    ​    redis从2.8开始就支持断点续传的功能。即如果master node和slave node发生连接中断，重新连接时，slave node并不会让master node重新进行数据的赋值，**而是从上次断开连接时复制的数据继续进行复制**。
 
-    ​    在master node中维护了一个backlog的变量，同时slave node和master node都会保存一个replica offset和master run id，其中offset就保存在backlog中。当重新连接之后，slave node会从上次连接的offset继续进行复制，如果没有找到对应的offset，那么就会执行一次resynchronization。
+    ​    在master node中维护了一个**backlog**的变量，同时slave node和master node都会保存一个**replica offset**和master run id，其中offset就保存在backlog中。**当重新连接之后，slave node会从上次连接的offset继续进行复制**，如果没有找到对应的offset，那么就会执行一次full resynchronization。
 
     ​    **注意：**
 
@@ -312,12 +316,12 @@
     #### 无磁盘化复制：
 
       master在内存中直接创建RDB，然后发送给slave，不会在自己本地落地磁盘了。只需要在配置文件中配置：
-
+    
     ```
     repli-diskless-sync yes
     #等待5s在开始复制，因为要等更多的slave重新连接起来
     repli-diskless-sync-delay 5
-    #ps：diskless：无磁盘化的
+#ps：diskless：无磁盘化的
     ```
 
     
@@ -375,21 +379,21 @@
        
 
     **全量复制**
-
+    
     - master 执行 bgsave ，在本地生成一份 rdb 快照文件。
     - master node 将 rdb 快照文件发送给 slave node，如果 rdb 复制时间超过 60秒（repl-timeout），那么 slave node 就会认为复制失败，可以适当调大这个参数(对于千兆网卡的机器，一般每秒传输 100MB，6G 文件，很可能超过 60s)
     - master node 在生成 rdb 时，会将所有新的写命令缓存在内存中，在 slave node 保存了 rdb 之后，再将新的写命令复制给 slave node。
     - 如果在复制期间，内存缓冲区持续消耗超过 64MB，或者一次性超过 256MB，那么停止复制，复制失败。
     - slave node 接收到 rdb 之后，清空自己的旧数据，然后重新加载 rdb 到自己的内存中，同时基于旧的数据版本对外提供服务。
-    - 如果 slave node 开启了 AOF，那么会立即执行 BGREWRITEAOF，重写 AOF。
+- 如果 slave node 开启了 AOF，那么会立即执行 BGREWRITEAOF，重写 AOF。
       rdb生成、rdb通过网络拷贝、slave旧数据的清理、slave aof rewrite，很耗费时间
 
       如果复制的数据量在4G~6G之间，那么很可能全量复制时间消耗到1分半到2分钟
 
     **增量复制**
-
+    
     - 如果全量复制过程中，master-slave 网络连接断掉，那么 slave 重新连接 master 时，会触发增量复制。
-    - master 直接从自己的 backlog 中获取部分丢失的数据，发送给 slave node，默认 backlog 就是1MB。
+- master 直接从自己的 backlog 中获取部分丢失的数据，发送给 slave node，默认 backlog 就是1MB。
     - msater就是根据 slave 发送的 psync 中的 offset 来从 backlog 中获取数据的。
 
     
@@ -408,7 +412,7 @@
 
     ### redis怎样才能做到高可用？
 
-    ​    一个slave挂掉了，是不会影响可用性的，还有其他的slave在提供相同数据下的仙童的对外的查询服务。
+    ​    一个slave挂掉了，是不会影响可用性的，还有其他的slave在提供相同数据下的对外的查询服务。
 
     ​    但是，如果master node死掉了呢？
 
@@ -434,7 +438,7 @@
 
      **2.消息通知**
 
-    ​     如果某个redis实例出问题了，哨兵负责发送消息作为金宝通知给管理员。
+    ​     如果某个redis实例出问题了，哨兵负责发送消息作为警报通知给管理员。
 
      **3.故障转移**
 
@@ -447,9 +451,9 @@
     
 
     **哨兵的核心知识**
-
+    
     - 哨兵至少需要 3 个实例，来保证自己的健壮性。
-    - 哨兵 + redis 主从的部署架构，是不保证数据零丢失的，只能保证 redis 集群的高可用性。
+- 哨兵 + redis 主从的部署架构，是不保证数据零丢失的，只能保证 redis 集群的高可用性。
     - 对于哨兵 + redis 主从这种复杂的部署架构，尽量在测试环境和生产环境，都进行充足的测试和演练。
 
     
@@ -460,7 +464,7 @@
 
       **1.异步复制导致数据丢失**
 
-    ​        因为master-->slave的复制都是异步的，所以可能有部分数据还没复制到slave，master就宕机了，这部分数据就丢失了。
+    ​        因为master-->slave的复制都是异步的，**所以可能有部分数据还没复制到slave，master就宕机了，这部分数据就丢失了**。
 
       **2.脑裂导致的数据丢失**
 
@@ -473,23 +477,23 @@
     #### 数据丢失问题的解决方案
 
     进行如下配置
-
+    
     ```
     min-slaves-to-write 1
-    min-slaves-max-lag 10
+min-slaves-max-lag 10
     ```
 
        上述配置要求至少要有一个slave，数据复制和同步的时间不能超过10秒。如果说一旦所有的slave，数据和同步的延迟都超过了10秒钟，那么这时候master就不会再接收任何的请求了。
 
        上述两个配置可以减少异步复制和脑裂导致的数据丢失。
-
+    
     ```
     1.减少异步复制数据的丢失
        有了min-----lag这个配置，可以确保一旦slave复制数据和ack延时太长，就认为master宕机后损失的数据太多了，就会拒绝写请求，这样可以把master宕机由于部分数据未同步到slave导致的数据丢失降低到可控范围内。
     
     2.减少脑裂的数据丢失
        如果一个master出现了脑裂，跟其他的slave丢失了连接，那么上述两个配置可以确保说，如果不能继续给指定数量的slave发送数据，而且slave超过10秒没有给自己ack消息，那么就直接拒绝客户端的写请求。
-       这样脑裂后的master就不会接收新的client的新数据，也就避免了数据丢失。上面的配置就确保了。，如果跟任何一个slave丢失了连接，在10秒后发现没有slave给自己ack，那么就拒绝新的请求。因此在脑裂的场景下，最多丢失10秒的数据。
+   这样脑裂后的master就不会接收新的client的新数据，也就避免了数据丢失。上面的配置就确保了。，如果跟任何一个slave丢失了连接，在10秒后发现没有slave给自己ack，那么就拒绝新的请求。因此在脑裂的场景下，最多丢失10秒的数据。
     ```
 
     
@@ -519,12 +523,12 @@
     - **slave-->master的选举算法**
 
       如果一个master被认为odown了，而且majority数量的 哨兵都允许主备切换，那么某一个哨兵就会执行主备切换操作，此时首先要选举出一个slave来，会考虑slave的一些信息：
-
+    
       ```
       1.跟master断开连接的时长
       2.0 slave优先级
       3.复制的offset
-      4.run id
+  4.run id
       ```
 
       ​       如果一个 slave 跟 master 断开连接的时间已经超过了**down-after-milliseconds**的 10 倍，外加 master 宕机的时长，那么 slave 就被认为不适合选举为 master。
@@ -538,9 +542,9 @@
       3.如果上面两个条件都相同，那么选择一个较小的run id的slave。
 
     - **quorum和majority**
-
+    
       每次一个哨兵要做主备切换，首先需要 quorum 数量的哨兵认为 odown，然后选举出一个哨兵来做切换，这个哨兵还得得到 majority 哨兵的授权，才能正式执行切换。
-        如果 quorum < majority，比如 5 个哨兵，majority 就是 3，quorum 设置为2，那么就 3 个哨兵授权就可以执行切换。
+    如果 quorum < majority，比如 5 个哨兵，majority 就是 3，quorum 设置为2，那么就 3 个哨兵授权就可以执行切换。
         但是如果 quorum >= majority，那么必须 quorum 数量的哨兵都授权，比如 5 个哨兵，quorum 是 5，那么必须 5 个哨兵都同意授权，才能执行切换。
 
       
@@ -628,7 +632,7 @@
     
 
     
-
+  
     
-
+  
   
