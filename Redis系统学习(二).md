@@ -106,7 +106,7 @@
 
    因为AOF文件只会生成一份，随着内存中的数据越来越多，持久化的数据越来越多，AOF文件也会越来越大。
 
-   而当redis中的数据越来越多之后，会进行一个过期键的处理，比如可能用到
+   而当redis中的数据越来越多之后，会进行一个过期键的处理，比如可能用到内存淘汰机制来删除过期的键。
 
    AOF rewrite操作，会给予当时redis中的数据，来重新构造一个更小的AOF文件，然后将就得膨胀的很大的文件给删了。
 
@@ -279,7 +279,7 @@
     >
     > redis replication-->主从架构-->读写分离-->水平扩容支撑读高并发
 
-    - redis采用异步方式复制结点，从redis2.8开始，slave node会周期性的确认自己每次复制的数据量。
+    - redis采用**异步方式复制结**点，从redis2.8开始，slave node会周期性的确认自己每次复制的数据量。
 
     - slave node也可以连接其他的slave node；
 
@@ -406,7 +406,7 @@
       如果复制的数据量在4G~6G之间，那么很可能全量复制时间消耗到1分半到2分钟
 
     **增量复制**
-    
+  
     - 如果全量复制过程中，master-slave 网络连接断掉，那么 slave 重新连接 master 时，会触发增量复制。
 - master 直接从自己的 backlog 中获取部分丢失的数据，发送给 slave node，默认 backlog 就是1MB。
     - msater就是根据 slave 发送的 psync 中的 offset 来从 backlog 中获取数据的。
@@ -509,7 +509,7 @@ min-slaves-max-lag 10
     2.减少脑裂的数据丢失
        如果一个master出现了脑裂，跟其他的slave丢失了连接，那么上述两个配置可以确保说，如果不能继续给指定数量的slave发送数据，而且slave超过10秒没有给自己ack消息，那么就直接拒绝客户端的写请求。
    这样脑裂后的master就不会接收新的client的新数据，也就避免了数据丢失。上面的配置就确保了。，如果跟任何一个slave丢失了连接，在10秒后发现没有slave给自己ack，那么就拒绝新的请求。因此在脑裂的场景下，最多丢失10秒的数据。
-    ```
+   ```
 
     
 
@@ -538,13 +538,13 @@ min-slaves-max-lag 10
     - **slave-->master的选举算法**
 
       如果一个master被认为odown了，而且majority数量的 哨兵都允许主备切换，那么某一个哨兵就会执行主备切换操作，此时首先要选举出一个slave来，会考虑slave的一些信息：
-    
+   
       ```
       1.跟master断开连接的时长
       2.0 slave优先级
       3.复制的offset
   4.run id
-      ```
+     ```
 
       ​       如果一个 slave 跟 master 断开连接的时间已经超过了**down-after-milliseconds**的 10 倍，外加 master 宕机的时长，那么 slave 就被认为不适合选举为 master。
 
@@ -610,7 +610,7 @@ min-slaves-max-lag 10
 
     
 
-       
+  ​     
 
     
 
@@ -634,7 +634,7 @@ min-slaves-max-lag 10
 
     
 
-      
+  ​    
 
     
 
