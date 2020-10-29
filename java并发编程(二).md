@@ -305,7 +305,7 @@
 
       - void acquire(int arg)
 
-        以独占模式尝试获取锁，其中的tryAcquire()方法需要自己实现
+        **以独占模式尝试获取锁，其中的tryAcquire()方法需要自己实现**
 
       ```java
         /**
@@ -408,7 +408,7 @@
     
       
     
-      - boolean acquireQueued(final Node node, int arg) 
+      - **boolean acquireQueued(final Node node, int arg)** 
 
   ```java
   /**
@@ -465,9 +465,9 @@
     
         /**
          *规则：
-            1.如果前继结点状态为signal，表明当前节点需要被唤醒，此时返回true。如果规则一发生了，意           味着前继结点是signal状态，意味着当前节点需要被阻塞。接下来会调用          parkAndCheckInterrupt方法阻塞该线程，直到当前线程被唤醒才从parkAndCheckInterrupt中返回。
+            1.如果前继结点状态为signal，表明当前节点需要被唤醒，此时返回true。如果规则一发生了，意味着前继结点是signal状态，意味着当前节点需要被阻塞。接下来会调用parkAndCheckInterrupt方法阻塞该线程，直到当前线程被唤醒才从parkAndCheckInterrupt中返回。
            
-           2.如果前继结点状态为cancelled（ws>0）,说明前继结点已经被取消，则通过回溯找到一个有效的           结点并返回false。
+           2.如果前继结点状态为cancelled（ws>0）,说明前继结点已经被取消，则通过回溯找到一个有效的结点并返回false。
             3.如果前继结点状态为非signal，非cancelled，则设置前继的状态为signal，并返回false。
          
          */
@@ -543,7 +543,7 @@
 
     1. 如果在等待过程中线程被中断过，那么就不作出响应。只是在获取到资源后才进行一个自我中断，将中断补上。
 
-    2. 在acquireQueued方法中需要完成两件事：第一，增加node节点；第二，挂起线程，使线程处于WAITING状态，等待被唤醒。
+    2. **在acquireQueued方法中需要完成两件事：第一，增加node节点；第二，挂起线程，使线程处于WAITING状态，等待被唤醒。**
 
     #### 问题：
     
@@ -555,7 +555,7 @@
     
        **2.为什么要执行一个selfInterrupt（），即为什么要自己产生一个中断？**
     
-    ​       答：这必须结合acquireQueued()进行分析，这个selfInterrupt方法只会在acquireQueued()时线程被中断过的情况下才会执行，否则不会执行。在这个方法中，即使是线程在阻塞状态被中断获取cpu执行的权利，但是他需要重新在循环中判断，如果该线程的前面还有其他等待锁的线程，根据公平性原则，该线程依然无法获取到锁。他会再次阻塞。
+    ​       答：这必须结合acquireQueued()进行分析，这个selfInterrupt方法只会在acquireQueued()时线程被中断过的情况下才会执行，否则不会执行。在这个方法中，即使是线程在阻塞状态被中断获取cpu执行的权利，但是他需要重新在循环中判断，**如果该线程的前面还有其他等待锁的线程，根据公平性原则，该线程依然无法获取到锁。他会再次阻塞。**
     
     ​         即在线程真正获取到锁并执行起来之前，他的中断会被忽略并且中断标记会被清除。在parkAnd。。中，线程的中断状态时调用了Thread.interrupted方法。该函数不同于Thread的isInterrupted函数，后者仅返回中断状态，而前者返回状态之后，会清除中断状态。正因为之前的中断状态被清除了，所以这里需要调用selfInterrupt重新产生一个中断，记录线程的中断状态。
 
@@ -621,3 +621,5 @@
     **2.释放锁：**
 
     ​    共享模式下不会有重入锁的现象出现，也就没有独占模式下，要求state=0时才可以唤醒后继线程的要求。
+    
+    
